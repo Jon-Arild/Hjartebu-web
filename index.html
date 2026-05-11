@@ -554,6 +554,50 @@
       .smart-section { padding: 4rem 2rem; }
     }
 
+    /* ── SIGNUP FORM ── */
+    .signup-form { max-width: 560px; margin: 0 auto; }
+    .form-row {
+      display: flex;
+      gap: 0.75rem;
+      flex-wrap: wrap;
+      justify-content: center;
+      margin-bottom: 1rem;
+    }
+    .form-row input {
+      flex: 1;
+      min-width: 180px;
+      padding: 0.85rem 1.2rem;
+      border-radius: 4px;
+      border: 1px solid rgba(253,250,246,0.2);
+      background: rgba(253,250,246,0.08);
+      color: var(--white);
+      font-family: 'DM Sans', sans-serif;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+    .form-row input::placeholder { color: rgba(253,250,246,0.4); }
+    .form-row input:focus { border-color: var(--orange); }
+    .form-note { font-size: 0.75rem; color: rgba(253,250,246,0.35); margin-top: 0.5rem; }
+    .form-success {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 0.75rem;
+      color: var(--white);
+    }
+    .success-icon {
+      width: 56px; height: 56px;
+      background: #4A7C59;
+      border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.4rem;
+      font-weight: 700;
+      color: white;
+    }
+    .form-success p { font-size: 1rem; color: rgba(253,250,246,0.8); }
+    .form-error { font-size: 0.85rem; color: #E07A45; margin-top: 0.5rem; }
+
     /* ── FADE IN ── */
     .fade-in { opacity: 0; transform: translateY(24px); transition: opacity 0.7s ease, transform 0.7s ease; }
     .fade-in.visible { opacity: 1; transform: translateY(0); }
@@ -887,9 +931,26 @@
 <!-- CTA -->
 <section class="cta" id="kom-i-gang">
   <h2 class="section-title fade-in">Klar for en bedre<br><em style="font-style:italic;color:var(--orange)">hytteopplevelse?</em></h2>
-  <p class="section-desc fade-in">Bli med i beta og få tidlig tilgang til Hjartebu — helt gratis.</p>
-  <div class="cta-buttons fade-in">
-    <a href="#" class="btn-primary">Bli beta-bruker</a>
+  <p class="section-desc fade-in">Meld deg på ventelisten og få tidlig tilgang til Hjartebu — helt gratis.</p>
+
+  <form class="signup-form fade-in" id="signupForm">
+    <div class="form-row">
+      <input type="text" id="signupNavn" placeholder="Ditt navn (valgfritt)" autocomplete="name" />
+      <input type="email" id="signupEpost" placeholder="E-postadresse" required autocomplete="email" />
+      <button type="submit" class="btn-primary">Meld meg på</button>
+    </div>
+    <p class="form-note">Ingen spam. Du kan melde deg av når som helst.</p>
+    <p class="form-error" id="signupError" style="display:none"></p>
+  </form>
+
+  <div id="signupSuccess" style="display:none;text-align:center">
+    <div class="form-success fade-in visible">
+      <div class="success-icon">✓</div>
+      <p>Takk! Vi tar kontakt når Hjartebu er klar for deg.</p>
+    </div>
+  </div>
+
+  <div class="cta-buttons fade-in" style="margin-top:2.5rem">
     <a href="https://hytte-app.vercel.app" class="btn-secondary" target="_blank">Gå til appen →</a>
   </div>
 </section>
@@ -934,6 +995,47 @@
     });
   }, { threshold: 0.1 });
   document.querySelectorAll('.fade-in').forEach(el => observer.observe(el));
+
+  // Venteliste-skjema
+  const SUPABASE_URL = "https://xylnjgtvacyfhbwoqaue.supabase.co";
+  const SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inh5bG5qZ3R2YWN5Zmhid29xYXVlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYwODE5NjgsImV4cCI6MjA5MTY1Nzk2OH0.ziIFtMC-QlPJMlUawokbzB6CaliN7rA40kSDYVkHVR4";
+
+  document.getElementById("signupForm").addEventListener("submit", async function (e) {
+    e.preventDefault();
+    const btn = this.querySelector("button[type=submit]");
+    const errorEl = document.getElementById("signupError");
+    const navn = document.getElementById("signupNavn").value.trim();
+    const epost = document.getElementById("signupEpost").value.trim();
+
+    btn.disabled = true;
+    btn.textContent = "Sender...";
+    errorEl.style.display = "none";
+
+    try {
+      const res = await fetch(`${SUPABASE_URL}/rest/v1/venteliste`, {
+        method: "POST",
+        headers: {
+          "apikey": SUPABASE_ANON_KEY,
+          "Content-Type": "application/json",
+          "Prefer": "return=minimal"
+        },
+        body: JSON.stringify({ navn: navn || null, epost })
+      });
+
+      if (res.ok || res.status === 201) {
+        document.getElementById("signupForm").style.display = "none";
+        document.getElementById("signupSuccess").style.display = "block";
+      } else {
+        const data = await res.json();
+        throw new Error(data.message || "Noe gikk galt");
+      }
+    } catch (err) {
+      errorEl.textContent = err.message.includes("duplicate") ? "Denne e-postadressen er allerede på listen." : "Noe gikk galt. Prøv igjen.";
+      errorEl.style.display = "block";
+      btn.disabled = false;
+      btn.textContent = "Meld meg på";
+    }
+  });
 </script>
 </body>
 </html>
